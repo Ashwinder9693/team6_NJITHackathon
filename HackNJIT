@@ -1,0 +1,150 @@
+import folium
+import webbrowser
+
+# Constant for total capacity
+Government_ports_available = 30
+
+# Set up a Folium map
+m = folium.Map(location=[51.5074, 0.1278], zoom_start=10, tiles='OpenStreetMap')
+
+# Initialize dictionary to keep track of reservations
+reservations = {}
+
+# Initialize array to store reservation data
+reservation_data = []
+
+# Add markers for parking spots
+port_locations = {
+    "Middlesex Port": [51.5195, 0.1278],
+    "Edison Port": [51.4854, 0.2278],
+    "New York Port": [51.4694, 0.3278],
+    "Piscatway Port": [51.4874, 0.4408]
+}
+
+# Function to check available spots and update the popup message
+def make_reservation(user, port, spots):
+    if port in reservations:
+        remaining_spots = Government_ports_available - reservations[port]
+    else:
+        remaining_spots = Government_ports_available
+
+    if remaining_spots == 0:
+        message = f"<b>The {port} is HouseFull</b>."
+        popup = folium.Popup(message, max_width=300)
+        folium.Marker(
+            location=port_locations[port],
+            popup=popup,
+            icon=folium.Icon(color='red')
+        ).add_to(m)
+        print(f"The {port} is HouseFull.")
+        return True
+
+    while spots > remaining_spots:
+        print(f"Only {remaining_spots} spot(s) are available. Please reserve within the available limit.")
+        spots = int(input("Enter the number of spots to reserve: "))
+
+    if remaining_spots >= 0:
+        if spots <= 4:
+            reservations[port] = reservations.get(port, 0) + spots
+            remaining_spots = Government_ports_available - reservations[port]
+            popup_text = f'<b>{port}</b><br>Available Spots: {remaining_spots}'
+            popup = folium.Popup(popup_text, max_width=300)
+            folium.Marker(
+                location=port_locations[port],
+                popup=popup,
+                icon=folium.Icon(color='blue')
+            ).add_to(m)
+            print(f"{user} reserved {spots} spot(s) at {port}.")
+            reservation_data.append(f"{user} reserved {spots} spot(s) at {port}.")  # Store data in the array
+            return False
+        else:
+            special_permission = input("Do you have special permission to reserve more than 4 spots? (yes/no): ")
+            if special_permission.lower() == 'yes':
+                attempts = 0
+                while attempts < 3:
+                    #passcode is admin123
+
+                    passcode = input("Please enter the passcode: ")
+                    if passcode == 'admin123':
+                        reservations[port] = reservations.get(port, 0) + spots
+                        remaining_spots = Government_ports_available - reservations[port]
+                        popup_text = f'<b>{port}</b><br>Available Spots: {remaining_spots}'
+                        popup = folium.Popup(popup_text, max_width=300)
+                        folium.Marker(
+                            location=port_locations[port],
+                            popup=popup,
+                            icon=folium.Icon(color='blue')
+                        ).add_to(m)
+                        print(f"{user} reserved {spots} spot(s) at {port}.")
+                        reservation_data.append(f"{user} reserved {spots} spot(s) at {port}.")  # Store data in the array
+                        return False
+                    else:
+                        attempts += 1
+                        if attempts == 3:
+                            print("Sorry, you are trying to break through the system. Reservation canceled.")
+                            break
+                        print("Incorrect passcode. Please try again.")
+            else:
+                print("Please choose between 1 and 4 spots.")
+                return False
+    else:
+        message = f"The <b>{port} is HouseFull</b>."
+        popup = folium.Popup(message, max_width=300)
+        folium.Marker(
+            location=port_locations[port],
+            popup=popup,
+            icon=folium.Icon(color='red')
+        ).add_to(m)
+        print(f"The {port} is <b>HouseFull</b>.")
+        return True
+
+# Reserve spots at each port
+for port in port_locations:
+    if port not in reservations:
+        remaining_spots = Government_ports_available
+        popup_text = f'<b>{port}</b><br>Available Spots: {remaining_spots}'
+        popup = folium.Popup(popup_text, max_width=300)
+        folium.Marker(
+            location=port_locations[port],
+            popup=popup,
+            icon=folium.Icon(color='blue')
+        ).add_to(m)
+
+    print(f"Available spots at {port}: {Government_ports_available}")
+    if input(f"Are there any reservations for {port}? (yes/no): ").lower() != 'yes':
+        continue
+    while Government_ports_available > 0:
+        user = input("Enter your name: ")
+        spots = int(input("Enter the number of spots to reserve: "))
+        is_housefull = make_reservation(user, port, spots)
+        if is_housefull:
+            break
+        if input(f"Is anyone else want to reserve for {port}? (yes/no): ").lower() != 'yes':
+            break
+    print()  # Add a line space before moving to the next port
+
+m.save('map.html')
+
+# Write reservation data to an HTML file
+with open('reservation_data.html', 'w') as file:
+    file.write('<html>\n')
+    file.write('<head>\n')
+    file.write('<style>\n')
+    file.write('body { font-family: Arial, sans-serif; }\n')
+    file.write('h1 { text-align: center; }\n')
+    file.write('p { margin: 10px; }\n')
+    file.write('.reservation { background-color: #999d9d; padding: 20px; border-radius: 5px; }\n')
+    file.write('</style>\n')
+    file.write('</head>\n')
+    file.write('<body>\n')
+    file.write('<h1>Reservation Data</h1>\n')
+    for data in reservation_data:
+        file.write('<div class="reservation">\n')
+        file.write(f'<p>{data}</p>\n')
+        file.write('</div>\n')
+    file.write('</body>\n')
+    file.write('</html>\n')
+
+# Open the reservation data file in a web browser
+webbrowser.open('reservation_data.html')
+webbrowser.open('map.html')
